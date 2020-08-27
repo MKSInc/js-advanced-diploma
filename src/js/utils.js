@@ -1,13 +1,22 @@
+export function convertIndexToCoordinates(index, boardSize) {
+  return { x: index % boardSize, y: Math.floor(index / boardSize) };
+}
+
 export function calcTileType(index, boardSize) {
   // TODO: write logic here
-  if (index === 0) return 'top-left';
-  if (index === boardSize - 1) return 'top-right';
-  if (index === boardSize ** 2 - 1) return 'bottom-right';
-  if (index === boardSize ** 2 - boardSize) return 'bottom-left';
-  if (index > 0 && index < boardSize - 1) return 'top';
-  if (index > boardSize ** 2 - boardSize && index < boardSize ** 2 - 1) return 'bottom';
-  if (((index + 1) % boardSize) === 0) return 'right';
-  if ((index % boardSize) === 0) return 'left';
+  const { x, y } = convertIndexToCoordinates(index, boardSize);
+  if (x === 0) {
+    if (y === 0) return 'top-left';
+    if (y === boardSize - 1) return 'bottom-left';
+    return 'left';
+  }
+  if (x === boardSize - 1) {
+    if (y === 0) return 'top-right';
+    if (y === boardSize - 1) return 'bottom-right';
+    return 'right';
+  }
+  if (y === 0) return 'top';
+  if (y === boardSize - 1) return 'bottom';
   return 'center';
 }
 
@@ -21,4 +30,18 @@ export function calcHealthLevel(health) {
   }
 
   return 'high';
+}
+
+export function calcAttackDefence(statValue, health) {
+  return Math.max(statValue, parseFloat((statValue * (1.8 - (100 - health) / 100)).toFixed()));
+}
+
+// Расчитать атаку и защиту в соответствии с уровнем сгенерированного персонажа
+export function calcCharacterStats(characters) {
+  for (const character of characters) {
+    for (let level = 1; level < character.level; level += 1) {
+      character.attack = calcAttackDefence(character.attack, character.health);
+      character.defence = calcAttackDefence(character.defence, character.health);
+    }
+  }
 }

@@ -1,3 +1,5 @@
+import { calcAttackDefence } from './utils';
+
 /**
  * Generates random characters
  *
@@ -9,7 +11,7 @@ export function* characterGenerator(allowedTypes, maxLevel) {
   // TODO: write logic here
   const randomCharacter = Math.floor(Math.random() * allowedTypes.length);
   const randomLevel = Math.floor(1 + Math.random() * (maxLevel));
-  yield new allowedTypes[randomCharacter](randomLevel);
+  yield new allowedTypes[randomCharacter]({ level: randomLevel });
 }
 
 export function generateTeam(allowedTypes, maxLevel, characterCount) {
