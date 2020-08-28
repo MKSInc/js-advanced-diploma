@@ -16,7 +16,7 @@ export default class GameController {
     this.gamePlay.drawUi(themes.prairie);
 
     // Тестовая отрисовка команды
-    const team = generateTeam([Bowman, Swordsman, Magician], 1, 3);
+    const team = generateTeam([Bowman, Swordsman, Magician], 3, 3);
     console.log(team);
     this.gamePlay.redrawPositions([
       new PositionedCharacter(team[0], 10),

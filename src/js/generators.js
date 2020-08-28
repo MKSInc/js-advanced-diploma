@@ -1,3 +1,5 @@
+import { calcAttackDefence } from './utils';
+
 /**
  * Generates random characters
  *
@@ -7,16 +9,27 @@
  */
 export function* characterGenerator(allowedTypes, maxLevel) {
   // TODO: write logic here
-  const randomCharacter = Math.floor(Math.random() * allowedTypes.length);
-  const randomLevel = Math.floor(1 + Math.random() * (maxLevel));
-  yield new allowedTypes[randomCharacter](randomLevel);
+  while (true) {
+    const randomCharacter = Math.floor(Math.random() * allowedTypes.length);
+    const randomLevel = Math.floor(1 + Math.random() * (maxLevel));
+    const character = new allowedTypes[randomCharacter]({ level: randomLevel });
+    for (let level = 1; level < character.level; level += 1) {
+      character.attack = calcAttackDefence(character.attack, character.health);
+      character.defence = calcAttackDefence(character.defence, character.health);
+    }
+    yield character;
+  }
 }
 
 export function generateTeam(allowedTypes, maxLevel, characterCount) {
   // TODO: write logic here
   const team = [];
-  for (let i = 0; i < characterCount; i += 1) {
-    team.push(characterGenerator(allowedTypes, maxLevel).next().value);
+  const generator = characterGenerator(allowedTypes, maxLevel);
+  let currentChCount = 0;
+  for (const character of generator) {
+    team.push(character);
+    currentChCount += 1;
+    if (currentChCount === characterCount) break;
   }
   return team;
 }
