@@ -190,7 +190,7 @@ export default class GamePlay {
   }
 
   selectCell(index, color = 'yellow') {
-    this.deselectCell(index);
+    // this.deselectCell(index);
     this.cells[index].classList.add('selected', `selected-${color}`);
   }
 
@@ -215,7 +215,6 @@ export default class GamePlay {
       damageEl.textContent = damage;
       damageEl.classList.add('damage');
       cell.appendChild(damageEl);
-
       damageEl.addEventListener('animationend', () => {
         cell.removeChild(damageEl);
         resolve();
