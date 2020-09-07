@@ -27,9 +27,9 @@ export function generateTeam(allowedTypes, maxLevel, characterCount) {
   const generator = characterGenerator(allowedTypes, maxLevel);
   let currentChCount = 0;
   for (const character of generator) {
+    if (currentChCount === characterCount) break;
     team.push(character);
     currentChCount += 1;
-    if (currentChCount === characterCount) break;
   }
   return team;
 }

@@ -24,8 +24,8 @@ export default class UserActions {
 
   onBotCellEnter(index) {
     if (!this.selectedCharacter) return;
-    // Если персонаж бота находится в радиусе атаки
     if (checkDistance(index, this.selectedCharacter, 'attack', this.gamePlay.boardSize)) {
+      // Если персонаж бота находится в радиусе атаки
       this.gamePlay.selectCell(index, 'red');
       this.gamePlay.setCursor(cursors.crosshair);
       return;

@@ -68,7 +68,6 @@ export default class GameController {
   }
 
   nextTurn() {
-    // this.gameState.currentPlayer = this.gameState.currentPlayer === 'user' ? 'bot' : 'user';
     this.selectedCharacter = null;
     console.log('gameState', this.gameState);
     this.gamePlay.redrawPositions([...this.gameState.userTeam.members, ...this.gameState.botTeam.members]);
@@ -150,16 +149,14 @@ export default class GameController {
       let posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
       if (posCharacter) {
         // Если навели курсор на персонажа пользователя
-        // !!! Показать хорактеристики !!!
-        console.log('Показать хорактеристики');
+        this.gamePlay.showCellTooltip(index, posCharacter);
         this.gamePlay.setCursor(cursors.pointer);
         return;
       }
       posCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
       if (posCharacter) {
         // Если навели курсор на персонажа бота
-        // !!! Показать хорактеристики !!!
-        console.log('Показать хорактеристики');
+        this.gamePlay.showCellTooltip(index, posCharacter);
         userActions.onBotCellEnter(index);
         return;
       }
@@ -170,9 +167,10 @@ export default class GameController {
 
   onCellLeave(index) {
     if (this.gameState) {
-      this.gamePlay.hideCellTooltip(index);
-      const posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
-      if (!posCharacter) this.gamePlay.deselectCell(index);
+      const userCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
+      const botCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
+      if (!userCharacter) this.gamePlay.deselectCell(index);
+      if (userCharacter || botCharacter) this.gamePlay.hideCellTooltip();
     }
   }
 }

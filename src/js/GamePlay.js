@@ -1,4 +1,8 @@
 import { calcHealthLevel, calcTileType } from './utils';
+import lvlPic from '../img/stats/lvl.png';
+import attackPic from '../img/stats/attack.png';
+import defencePic from '../img/stats/defence.png';
+import healthPic from '../img/stats/health.png';
 
 export default class GamePlay {
   constructor() {
@@ -200,12 +204,25 @@ export default class GamePlay {
       .filter((o) => o.startsWith('selected')));
   }
 
-  showCellTooltip(message, index) {
-    this.cells[index].title = message;
+  showCellTooltip(index, posCharacter) {
+    const cellEl = this.cells[index];
+    const hintEl = document.createElement('div');
+    hintEl.classList.add('hint');
+    hintEl.innerHTML = `
+    <img src="${lvlPic}"> ${posCharacter.character.level}
+    <img src="${attackPic}"> ${posCharacter.character.attack}
+    <img src="${defencePic}"> ${posCharacter.character.defence}
+    <img src="${healthPic}"> ${posCharacter.character.health}
+     `;
+    const { left: cellLeft, top: cellTop } = cellEl.getBoundingClientRect();
+    hintEl.style.left = `${cellLeft + 45}px`;
+    hintEl.style.top = `${cellTop + 45}px`;
+    cellEl.insertAdjacentElement('beforeend', hintEl);
   }
 
-  hideCellTooltip(index) {
-    this.cells[index].title = '';
+  hideCellTooltip() {
+    const hintEl = this.boardEl.getElementsByClassName('hint')[0];
+    if (hintEl) hintEl.remove();
   }
 
   showDamage(index, damage) {
