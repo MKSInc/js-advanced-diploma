@@ -6,6 +6,7 @@ call npm install --save-dev html-loader
 call npm install --save-dev html-webpack-plugin
 call npm install --save-dev mini-css-extract-plugin css-loader
 call npm install --save-dev url-loader
+call npm install --save-dev clean-webpack-plugin
 call npm install --save-dev jest babel-jest
 call npm install --save-dev eslint
 call npx eslint --init
