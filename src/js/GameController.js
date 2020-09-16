@@ -1,9 +1,11 @@
-/* eslint-disable no-console,max-len */
+/* eslint-disable max-len */
 import themes from './themes';
 import cursors from './cursors';
 import GameState from './GameState';
 import { levelUpCharacters, recreateCharacters, calcScores } from './utils';
 import UserActions from './UserActions';
+import BotAction from './botActions';
+import GamePlay from './GamePlay';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -12,7 +14,7 @@ export default class GameController {
     this.currentTheme = themes.prairie;
     this.gameState = null;
     this.selectedCharacter = null;
-    this.isAnimation = { value: false };
+    this.isGameRunning = false;
   }
 
   init() {
@@ -40,14 +42,16 @@ export default class GameController {
 
   // Перерисовывает игровое поле, если текущая тема не соответствует уровню
   redrawBoard() {
-    let theme = '';
-    switch (this.gameState.level) {
-      case 1: theme = themes.prairie; break;
-      case 2: theme = themes.desert; break;
-      case 3: theme = themes.arctic; break;
-      case 4: theme = themes.mountain; break;
-      default: theme = themes.mountain; break;
-    }
+    let { level } = this.gameState;
+    if (level > 4) level = 4;
+    const themesByLevel = {
+      1: themes.prairie,
+      2: themes.desert,
+      3: themes.arctic,
+      4: themes.mountain,
+    };
+    const theme = themesByLevel[level];
+
     if (this.currentTheme !== theme) {
       this.currentTheme = theme;
       this.gamePlay.drawUi(this.currentTheme);
@@ -58,6 +62,7 @@ export default class GameController {
   }
 
   onNewGameClick() {
+    this.isGameRunning = true;
     if (this.gameState) {
       const { maxScores } = this.gameState;
       this.gameState = new GameState({ maxScores });
@@ -69,14 +74,47 @@ export default class GameController {
 
   nextTurn() {
     this.selectedCharacter = null;
-    console.log('gameState', this.gameState);
     this.gamePlay.redrawPositions([...this.gameState.userTeam.members, ...this.gameState.botTeam.members]);
     if (this.gameState.currentPlayer === 'bot') {
-      console.log('Действия бота...');
       // Действия бота
-
-      this.gameState.currentPlayer = 'user';
-      this.nextTurn();
+      const botAction = new BotAction(this.gamePlay, this.gameState);
+      botAction.setPairAndAction();
+      if (botAction.action === 'attack') {
+        // Цепочка промисов для атаки:
+        // 4. ... продолжение цепочки:
+        //    В зависимости от исхода атаки: возвращает соответствующую задержку для следующего звена
+        // 5. Если полученная задержка 0, то не ждет окончания анимации урона и передает ход пользователю
+        //    Если задержка больше 0, то заканчивает игру, обновляет персонажей на поле,
+        //    дает возможность анимации закончится, выводит окно с сообщением о конце игры.
+        botAction.attackTarget()
+          .then(() => new Promise((resolve) => {
+            if (this.gameState.userTeam.members.length === 0) {
+              resolve(500);
+            }
+            resolve(0);
+          })).then((result) => {
+            setTimeout(() => {
+              if (result !== 0) {
+                this.isGameRunning = false;
+                this.gamePlay.setCursor(cursors.auto);
+                this.gamePlay.redrawPositions([...this.gameState.botTeam.members]);
+                setTimeout(() => GamePlay.showMessage('Игра окончена. Вы проиграли.'), 100);
+              } else {
+                this.gameState.currentPlayer = 'user';
+                this.nextTurn();
+              }
+            }, result);
+          });
+      } else if (botAction.action === 'move') {
+        const cellIndexToMove = botAction.getCellIndexToMove();
+        // Цепочка промисов для перемещения:
+        // 4. ... продолжение цепочки: передает ход пользователю
+        botAction.moveToCell(cellIndexToMove)
+          .then(() => {
+            this.gameState.currentPlayer = 'user';
+            this.nextTurn();
+          });
+      }
     }
   }
 
@@ -89,88 +127,87 @@ export default class GameController {
 
   onLoadGameClick() {
     const state = this.stateService.load();
-    if (state) {
-      if (this.gameState) state.maxScores = Math.max(state.maxScores, this.gameState.maxScores);
-      this.gameState = new GameState(state);
-      this.gameState.userTeam.members = recreateCharacters(this.gameState.userTeam);
-      this.gameState.botTeam.members = recreateCharacters(this.gameState.botTeam);
-      this.redrawBoard();
-      this.nextTurn();
-    } else console.log('Нет сохраненной игры');
+
+    // eslint-disable-next-line no-console
+    if (!state) { GamePlay.showError('Нет сохраненной игры'); return; }
+    this.isGameRunning = true;
+    if (this.gameState) state.maxScores = Math.max(state.maxScores, this.gameState.maxScores);
+    this.gameState = new GameState(state);
+    this.gameState.userTeam.members = recreateCharacters(this.gameState.userTeam);
+    this.gameState.botTeam.members = recreateCharacters(this.gameState.botTeam);
+    this.redrawBoard();
+    this.nextTurn();
   }
 
-  async onCellClick(index) {
-    if (this.isAnimation.value) return;
-    if (this.gameState) {
-      if (this.gameState.currentPlayer !== 'user') return;
-      const userActions = new UserActions(this.gamePlay, this.gameState, this.selectedCharacter);
-      let posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
-      if (posCharacter) {
-        // Реакция на клик по персонажу пользователя
-        console.log('Click on user character: ', posCharacter);
-        this.selectedCharacter = userActions.onUserCellClick(posCharacter);
-        return;
-      }
-      posCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
-      if (posCharacter) {
-        // Реакция на клик по персонажу бота
-        console.log('Click on bot character: ', posCharacter);
-        const damage = userActions.onBotCellClick(posCharacter);
-        if (damage) {
-          // Если персонаж бота был атакован
-          this.isAnimation.value = true;
-          await this.gamePlay.showDamage(posCharacter.position, damage);
-          this.isAnimation.value = false;
-          this.gamePlay.deselectCell(this.selectedCharacter.position);
-          this.gamePlay.deselectCell(index);
-          this.gamePlay.setCursor(cursors.auto);
-          if (this.gameState.botTeam.members.length === 0) {
-            // Если у бота не осталось персонажей
-            const { scores, maxScores } = calcScores(this.gameState);
-            this.gameState.scores = scores;
-            this.gameState.maxScores = maxScores;
-            this.gameState.level += 1;
-            this.generateInitialState();
+  onCellClick(index) {
+    if (!this.isGameRunning) return;
+    if (this.gameState.currentPlayer !== 'user') return;
+    const userActions = new UserActions(this.gamePlay, this.gameState, this.selectedCharacter);
+    let posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
+    if (posCharacter) {
+      // Реакция на клик по персонажу пользователя
+      this.selectedCharacter = userActions.onUserCellClick(posCharacter);
+      return;
+    }
+    posCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
+    if (posCharacter) {
+      // Реакция на клик по персонажу бота
+      const damage = userActions.onBotCellClick(posCharacter);
+      if (damage) {
+        // Если персонаж бота был атакован
+        this.gamePlay.showDamage(posCharacter.position, damage);
+        this.gamePlay.deselectCell(this.selectedCharacter.position);
+        this.gamePlay.deselectCell(index);
+        this.gamePlay.setCursor(cursors.auto);
+        if (this.gameState.botTeam.members.length === 0) {
+          // Если у бота не осталось персонажей, переход на следующий уровень
+          const { scores, maxScores } = calcScores(this.gameState);
+          this.gameState.scores = scores;
+          this.gameState.maxScores = maxScores;
+          this.gameState.level += 1;
+          this.generateInitialState();
+          setTimeout(() => {
             this.redrawBoard();
-          } else this.gameState.currentPlayer = 'bot';
+            this.nextTurn();
+          }, 500);
+        } else {
+          this.gameState.currentPlayer = 'bot';
           this.nextTurn();
         }
-        return;
       }
-      // Реакция на клик по пустой ячейке
-      const isNextTurn = userActions.onEmptyCellClick(index);
-      if (isNextTurn) this.nextTurn();
+      return;
     }
+    // Реакция на клик по пустой ячейке
+    const isNextTurn = userActions.onEmptyCellClick(index);
+    if (isNextTurn) this.nextTurn();
   }
 
   onCellEnter(index) {
-    if (this.gameState) {
-      const userActions = new UserActions(this.gamePlay, this.gameState, this.selectedCharacter);
-      let posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
-      if (posCharacter) {
-        // Если навели курсор на персонажа пользователя
-        this.gamePlay.showCellTooltip(index, posCharacter);
-        this.gamePlay.setCursor(cursors.pointer);
-        return;
-      }
-      posCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
-      if (posCharacter) {
-        // Если навели курсор на персонажа бота
-        this.gamePlay.showCellTooltip(index, posCharacter);
-        userActions.onBotCellEnter(index);
-        return;
-      }
-      // Если навели курсор на пустую ячейку
-      userActions.onEmptyCellEnter(index);
+    if (!this.isGameRunning) return;
+    const userActions = new UserActions(this.gamePlay, this.gameState, this.selectedCharacter);
+    let posCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
+    if (posCharacter) {
+      // Если навели курсор на персонажа пользователя
+      this.gamePlay.showCellTooltip(index, posCharacter);
+      this.gamePlay.setCursor(cursors.pointer);
+      return;
     }
+    posCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
+    if (posCharacter) {
+      // Если навели курсор на персонажа бота
+      this.gamePlay.showCellTooltip(index, posCharacter);
+      userActions.onBotCellEnter(index);
+      return;
+    }
+    // Если навели курсор на пустую ячейку
+    userActions.onEmptyCellEnter(index);
   }
 
   onCellLeave(index) {
-    if (this.gameState) {
-      const userCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
-      const botCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
-      if (!userCharacter) this.gamePlay.deselectCell(index);
-      if (userCharacter || botCharacter) this.gamePlay.hideCellTooltip();
-    }
+    if (!this.isGameRunning) return;
+    const userCharacter = this.gameState.userTeam.members.find((el) => el.position === index);
+    const botCharacter = this.gameState.botTeam.members.find((el) => el.position === index);
+    if (!userCharacter) this.gamePlay.deselectCell(index);
+    if (userCharacter || botCharacter) this.gamePlay.hideCellTooltip();
   }
 }

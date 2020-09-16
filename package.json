@@ -7,7 +7,12 @@
     "start": "webpack-dev-server --mode development",
     "build": "webpack --mode development",
     "lint": "eslint .",
-    "test": "jest --coverage"
+    "test": "jest"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/__mocks__/fileMock.js"
+    }
   },
   "repository": {
     "type": "git",

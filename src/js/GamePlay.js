@@ -76,9 +76,11 @@ export default class GamePlay {
    */
   redrawPositions(positions) {
     for (const cell of this.cells) {
-      cell.innerHTML = '';
+      const characterEl = cell.getElementsByClassName('character');
+      const hintEl = cell.getElementsByClassName('hint');
+      if (characterEl.length !== 0) characterEl[0].remove();
+      if (hintEl.length !== 0) hintEl[0].remove();
     }
-
     for (const position of positions) {
       const cellEl = this.boardEl.children[position.position];
       const charEl = document.createElement('div');
@@ -194,7 +196,6 @@ export default class GamePlay {
   }
 
   selectCell(index, color = 'yellow') {
-    // this.deselectCell(index);
     this.cells[index].classList.add('selected', `selected-${color}`);
   }
 
@@ -209,10 +210,10 @@ export default class GamePlay {
     const hintEl = document.createElement('div');
     hintEl.classList.add('hint');
     hintEl.innerHTML = `
-    <img src="${lvlPic}"> ${posCharacter.character.level}
-    <img src="${attackPic}"> ${posCharacter.character.attack}
-    <img src="${defencePic}"> ${posCharacter.character.defence}
-    <img src="${healthPic}"> ${posCharacter.character.health}
+    <img src="${lvlPic}"><span class="level">${posCharacter.character.level}</span>
+    <img src="${attackPic}"><span class="attack">${posCharacter.character.attack}</span>
+    <img src="${defencePic}"><span class="defence">${posCharacter.character.defence}</span>
+    <img src="${healthPic}"><span class="health">${posCharacter.character.health}</span>
      `;
     const { left: cellLeft, top: cellTop } = cellEl.getBoundingClientRect();
     hintEl.style.left = `${cellLeft + 45}px`;

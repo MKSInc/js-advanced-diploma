@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import cursors from './cursors';
-import { checkDistance } from './utils';
+import { checkDistance, calcDamage, makeDamage } from './utils';
 import GamePlay from './GamePlay';
 
 export default class UserActions {
@@ -23,7 +23,10 @@ export default class UserActions {
   }
 
   onBotCellEnter(index) {
-    if (!this.selectedCharacter) return;
+    if (!this.selectedCharacter) {
+      this.gamePlay.setCursor(cursors.auto);
+      return;
+    }
     if (checkDistance(index, this.selectedCharacter, 'attack', this.gamePlay.boardSize)) {
       // Если персонаж бота находится в радиусе атаки
       this.gamePlay.selectCell(index, 'red');
@@ -90,14 +93,8 @@ export default class UserActions {
     // Если ячейка находится в радиусе атаки персонажа
     const { character: attacker } = this.selectedCharacter;
     const { character: target } = posCharacter;
-    const minDamage = parseFloat((attacker.attack * 0.1).toFixed(1));
-    const damage = Math.max(attacker.attack - target.defence, minDamage);
-
-    target.health -= damage;
-    if (target.health <= 0) {
-      // Удаляем уничтоженного персонажа из команды
-      this.gameState.botTeam.members = this.gameState.botTeam.members.filter((el) => el !== posCharacter);
-    } else target.health = parseFloat(target.health.toFixed(1));
+    const damage = calcDamage(attacker, target);
+    makeDamage(damage, posCharacter, this.gameState.botTeam);
     return damage;
   }
 }

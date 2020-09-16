@@ -8,21 +8,16 @@ import { calcAttackDefence } from './utils';
  * @returns Character type children (ex. Magician, Bowman, etc)
  */
 export function* characterGenerator(allowedTypes, maxLevel) {
-  // TODO: write logic here
   while (true) {
     const randomCharacter = Math.floor(Math.random() * allowedTypes.length);
     const randomLevel = Math.floor(1 + Math.random() * (maxLevel));
     const character = new allowedTypes[randomCharacter]({ level: randomLevel });
-    for (let level = 1; level < character.level; level += 1) {
-      character.attack = calcAttackDefence(character.attack, character.health);
-      character.defence = calcAttackDefence(character.defence, character.health);
-    }
+    for (let level = 1; level < character.level; level += 1) calcAttackDefence(character);
     yield character;
   }
 }
 
 export function generateTeam(allowedTypes, maxLevel, characterCount) {
-  // TODO: write logic here
   const team = [];
   const generator = characterGenerator(allowedTypes, maxLevel);
   let currentChCount = 0;

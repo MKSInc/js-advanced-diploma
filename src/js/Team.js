@@ -24,6 +24,7 @@ export default class Team {
       }
     } else if (team === 'bot') {
       allowedTypes = [Vampire, Undead, Daemon];
+      characterMaxLevel = gameLevel + 1;
     }
 
     characters = [...characters, ...generateTeam(allowedTypes, characterMaxLevel, characterCount)];
@@ -32,5 +33,9 @@ export default class Team {
     for (let i = 0; i < characters.length; i += 1) {
       this.members.push(new PositionedCharacter(characters[i], charactersPositions[i]));
     }
+  }
+
+  deleteMember(member) {
+    this.members = this.members.filter((el) => el !== member);
   }
 }

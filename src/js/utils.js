@@ -50,14 +50,16 @@ export default function generateRandomPositions(characterCount, player, boardSiz
 }
 
 /**
- * Calculates the attack and defense of the character depending on his health
+ * Расчитывает атаку и защиту персонажа
  *
- * @param statValue character attack or defence value
- * @param health character health value
- * @returns number value of character's attack or defence
+ * @param character - объект наследник Character
  */
-export function calcAttackDefence(statValue, health) {
-  return Math.max(statValue, parseFloat((statValue * (1.8 - (100 - health) / 100)).toFixed()));
+export function calcAttackDefence(character) {
+  const ch = character;
+  ch.attack += ch.baseAttack * 0.20;
+  ch.defence += ch.baseDefence * 0.20;
+  if (ch.attack > ch.maxAttack) ch.attack = ch.maxAttack;
+  if (ch.defence > ch.maxDefence) ch.defence = ch.maxDefence;
 }
 
 export function checkDistance(index, selectedCharacter, action, boardSize) {
@@ -69,8 +71,28 @@ export function checkDistance(index, selectedCharacter, action, boardSize) {
 }
 
 /**
+ * Посчитать урон по цели
+ *
+ * @param attacker - атакующий - объект наследник Character
+ * @param target - цель - объект наследник Character
+ * @returns number - урон нанесенный цели
+ */
+export function calcDamage(attacker, target) {
+  const absorbedDamage = (attacker.attack * (target.defence / 100));
+  return Math.round(parseFloat((attacker.attack - absorbedDamage).toFixed(1)));
+}
+
+// Наносит урон по персонажу, если персонаж уничтожен, то удаляет его из комманды
+export function makeDamage(damage, posCharacter, team) {
+  const { character: target } = posCharacter;
+  target.health -= damage;
+  if (target.health <= 0) team.deleteMember(posCharacter);
+  else target.health = parseFloat(target.health.toFixed(1));
+}
+
+/**
  * Для персонажей перешедших на новый уровень:
- * поднять уровень, пересчитать атаку и защиту в соответствии с оставшимся здоровьем, вылечить
+ * поднять уровень, пересчитать атаку и защиту, вылечить
  *
  * @param team объект класса Team
  */
@@ -78,8 +100,7 @@ export function levelUpCharacters(team) {
   for (const posCharacter of team.members) {
     const { character } = posCharacter;
     character.level += 1;
-    character.attack = calcAttackDefence(character.attack, character.health);
-    character.defence = calcAttackDefence(character.defence, character.health);
+    calcAttackDefence(character);
     character.health += 80;
     if (character.health > 100) character.health = 100;
   }
